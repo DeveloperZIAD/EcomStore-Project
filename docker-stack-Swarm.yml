@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    user: root
+    privileged: true
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrongPassword123!
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql/data
+    networks:
+      - ecom_network
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager # يضمن بقاء قاعدة البيانات على السيرفر الرئيسي
+
+  backend:
+    # هنا ستضع اسم الصورة بعد رفعها مستقبلاً (مثال: your-id/ecom_backend)
+    image: ecom_backend_api:latest 
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=db;Database=EcomStoreDB;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True
+    ports:
+      - "5000:8080"
+    networks:
+      - ecom_network
+    deploy:
+      replicas: 2 # توزيع الأحمال على نسختين
+      restart_policy:
+        condition: on-failure
+
+  frontend:
+    # هنا ستضع اسم الصورة بعد رفعها مستقبلاً (مثال: your-id/ecom_frontend)
+    image: ecom_frontend_app:latest
+    ports:
+      - "4200:80"
+    networks:
+      - ecom_network
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        order: start-first
+
+networks:
+  ecom_network:
+    driver: overlay # المحرك الخاص بربط الحاويات في وضع Swarm
+
+volumes:
+  sql_data:

@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <DatabaseConfig>
 	<ConnectionString>
-		Server=.;
-		Database=Ecomstore;
+		Server=db;
+		Database=EcomStoreDB;
 		User Id=sa;
-		Password=12345;
+		Password=YourStrongPassword123!;
 		TrustServerCertificate=True;
 	</ConnectionString>
 </DatabaseConfig>

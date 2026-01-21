@@ -1,9 +1,30 @@
-echo node_modules/ > .gitignore
-echo bin/ >> .gitignore
-echo obj/ >> .gitignore
-echo .vs/ >> .gitignore
-echo *.user >> .gitignore
-echo *.suo >> .gitignore
-echo publish/ >> .gitignore
-echo .env >> .gitignore
-echo appsettings.Development.json >> .gitignore
+# Dependency directories
+node_modules/
+
+# Build outputs
+bin/
+obj/
+publish/
+build/
+dist/
+
+# IDE settings
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+
+# Environment variables
+.env
+appsettings.Development.json
+
+# Database backups & files
+*.bak
+*.mdf
+*.ldf
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
