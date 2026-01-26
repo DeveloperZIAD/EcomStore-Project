@@ -1,13 +1,12 @@
-version: '3.8'
+version: "3.8"
 
 services:
   db:
     image: mcr.microsoft.com/azure-sql-edge:latest
-    user: root
-    privileged: true
+    container_name: ecom_sql_db
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=YourStrongPassword123!
+      - MSSQL_SA_PASSWORD=${MSSQL_PASSWORD:-YourStrongPassword123!}
       - MSSQL_PID=Developer
     ports:
       - "1433:1433"
@@ -15,44 +14,61 @@ services:
       - sql_data:/var/opt/mssql/data
     networks:
       - ecom_network
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager # يضمن بقاء قاعدة البيانات على السيرفر الرئيسي
+    # [Point 3] Health Check لضمان أن قاعدة البيانات جاهزة قبل اتصال الـ Backend
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${MSSQL_PASSWORD:-YourStrongPassword123!} -Q 'SELECT 1' || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
-    # هنا ستضع اسم الصورة بعد رفعها مستقبلاً (مثال: your-id/ecom_backend)
-    image: ecom_backend_api:latest 
+    # [Point 1] إضافة الـ Image Tag الخاص بـ GHCR
+    image: ghcr.io/developerziad/ecom-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Server=db;Database=EcomStoreDB;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True
+      # [Point 2] استخدام متغيرات البيئة بدلاً من كتابة النصوص برمجياً
+      - ConnectionStrings__DefaultConnection=Server=db;Database=EcomStoreDB;User Id=sa;Password=${MSSQL_PASSWORD:-YourStrongPassword123!};TrustServerCertificate=True
     ports:
       - "5000:8080"
+    depends_on:
+      db:
+        condition: service_healthy # لن يعمل الـ Backend حتى ينجح الـ Health check الخاص بالـ DB
     networks:
       - ecom_network
     deploy:
-      replicas: 2 # توزيع الأحمال على نسختين
+      replicas: 2 # ميزة Swarm: تشغيل نسختين لضمان عدم توقف المتجر
       restart_policy:
         condition: on-failure
 
   frontend:
-    # هنا ستضع اسم الصورة بعد رفعها مستقبلاً (مثال: your-id/ecom_frontend)
-    image: ecom_frontend_app:latest
+    # [Point 1] إضافة الـ Image Tag الخاص بـ GHCR
+    image: ghcr.io/developerziad/ecom-frontend:latest
+    build:
+      context: ./EcomFront
+      dockerfile: Dockerfile
     ports:
       - "4200:80"
+    depends_on:
+      - backend
     networks:
       - ecom_network
     deploy:
       replicas: 2
       update_config:
         parallelism: 1
-        order: start-first
+        delay: 10s
 
 networks:
   ecom_network:
-    driver: overlay # المحرك الخاص بربط الحاويات في وضع Swarm
+    driver: overlay # في Swarm نستخدم overlay لربط الحاويات عبر عقد مختلفة
 
 volumes:
   sql_data:

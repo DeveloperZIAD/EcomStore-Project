@@ -1,0 +1,60 @@
+name: EcomStore Continuous Delivery
+
+on:
+  push:
+    branches: [main] # سيعمل الأكشن فقط عند الرفع على الفرع الرئيسي
+
+permissions:
+  contents: read
+  packages: write # ضروري للسماح للأكشن برفع الصور لـ GitHub Packages
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. جلب الكود من المستودع
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. إعداد Honeycomb للمراقبة (Pipeline Observability)
+      - name: Setup Honeycomb
+        uses: honeycombio/gha-buildevents@v2
+        with:
+          apikey: ${{ secrets.HONEYCOMB_API_KEY }}
+          dataset: ecom-store-production
+
+      # 3. تسجيل الدخول لـ GitHub Container Registry (GHCR)
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 4. بناء الصور (Backend & Frontend) بناءً على ملف الـ Swarm
+      - name: Build Images
+        run: |
+          docker compose -f docker-stack-Swarm.yml build
+
+      # 5. رفع الصور لـ GitHub Packages
+      - name: Push Images to GHCR
+        run: |
+          docker compose -f docker-stack-Swarm.yml push
+
+      # 6. اختبار تشغيل الحاويات (Smoke Test)
+      - name: Smoke Test
+        run: |
+          # تشغيل النظام مصغراً للتأكد من عدم وجود أخطاء قاتلة
+          docker compose -f docker-stack-Swarm.yml up -d
+          sleep 30 # وقت إضافي لـ SQL Edge لتبدأ
+          docker ps
+          # التأكد من أن الحاويات تعمل (ليست في حالة Restarting)
+          if [ $(docker ps -f status=running | wc -l) -lt 3 ]; then 
+            echo "❌ Some containers failed to start!"; 
+            exit 1; 
+          fi
+
+      # 7. التقرير النهائي
+      - name: Success Notification
+        if: success()
+        run: echo "🚀 Build and Test passed! Railway will now take over deployment."
