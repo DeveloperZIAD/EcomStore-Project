@@ -1,4 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <DatabaseConfig>
-<ConnectionString>Data Source=caboose.proxy.rlwy.net,27825;Initial Catalog=EcomStoreDB;User ID=sa;Password=YourStrongPassword123!;Encrypt=True;TrustServerCertificate=True;MultiSubnetFailover=True;</ConnectionString>
+<ConnectionString>Data Source=caboose.proxy.rlwy.net,27825;Initial Catalog=EcomStoreDB;User ID=sa;Password=YourStrongPassword123!;Encrypt=False;TrustServerCertificate=True;</ConnectionString>
 </DatabaseConfig>
+
+
