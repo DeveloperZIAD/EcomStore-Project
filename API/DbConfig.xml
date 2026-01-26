@@ -1,10 +1,4 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <DatabaseConfig>
-	<ConnectionString>
-		Server=db;
-		Database=EcomStoreDB;
-		User Id=sa;
-		Password=YourStrongPassword123!;
-		TrustServerCertificate=True;
-	</ConnectionString>
+	<ConnectionString>Server=caboose.proxy.rlwy.net,27825;Database=EcomStoreDB;User Id=sa;Password=YourStrongPassword123!;TrustServerCertificate=True;</ConnectionString>
 </DatabaseConfig>
