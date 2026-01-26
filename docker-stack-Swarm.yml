@@ -3,7 +3,7 @@ version: "3.8"
 services:
   db:
     image: mcr.microsoft.com/azure-sql-edge:latest
-    container_name: ecom_sql_db
+    # ملاحظة: container_name يتم تجاهله في Swarm، الـ Stack يعطيه اسماً تلقائياً
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${MSSQL_PASSWORD:-YourStrongPassword123!}
@@ -14,7 +14,6 @@ services:
       - sql_data:/var/opt/mssql/data
     networks:
       - ecom_network
-    # [Point 3] Health Check لضمان أن قاعدة البيانات جاهزة قبل اتصال الـ Backend
     healthcheck:
       test:
         [
@@ -24,9 +23,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      restart_policy:
+        condition: on-failure
 
   backend:
-    # [Point 1] إضافة الـ Image Tag الخاص بـ GHCR
     image: ghcr.io/developerziad/ecom-backend:latest
     build:
       context: .
@@ -34,22 +35,23 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
-      # [Point 2] استخدام متغيرات البيئة بدلاً من كتابة النصوص برمجياً
       - ConnectionStrings__DefaultConnection=Server=db;Database=EcomStoreDB;User Id=sa;Password=${MSSQL_PASSWORD:-YourStrongPassword123!};TrustServerCertificate=True
     ports:
       - "5000:8080"
+    # [التصحيح]: في Swarm الـ depends_on يجب أن تكون قائمة أسماء فقط
     depends_on:
-      db:
-        condition: service_healthy # لن يعمل الـ Backend حتى ينجح الـ Health check الخاص بالـ DB
+      - db
     networks:
       - ecom_network
     deploy:
-      replicas: 2 # ميزة Swarm: تشغيل نسختين لضمان عدم توقف المتجر
+      replicas: 2
       restart_policy:
         condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
 
   frontend:
-    # [Point 1] إضافة الـ Image Tag الخاص بـ GHCR
     image: ghcr.io/developerziad/ecom-frontend:latest
     build:
       context: ./EcomFront
@@ -65,10 +67,13 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
+      restart_policy:
+        condition: on-failure
 
 networks:
   ecom_network:
-    driver: overlay # في Swarm نستخدم overlay لربط الحاويات عبر عقد مختلفة
+    driver: overlay
+    attachable: true # يسمح للحاويات العادية بالاتصال بالشبكة إذا لزم الأمر
 
 volumes:
   sql_data:
