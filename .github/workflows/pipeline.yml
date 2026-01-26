@@ -50,12 +50,20 @@ jobs:
 
       - name: Production Smoke Test
         run: |
+          echo "Starting containers in standard mode for validation..."
+          # سنستخدم docker compose بدون stack لأننا لسنا في swarm mode هنا
           docker compose -f docker-stack-Swarm.yml up -d
+
+          echo "Waiting for services to stabilize..."
           sleep 45 
+
           docker ps
+
+          # التحقق من تشغيل الحاويات
           RUNNING_COUNT=$(docker ps --filter "status=running" --format "{{.Names}}" | wc -l)
           if [ "$RUNNING_COUNT" -lt 3 ]; then
-            echo "❌ Critical Error: Containers failed!"
+            echo "❌ Critical Error: Containers failed to start in time!"
+            docker compose -f docker-stack-Swarm.yml logs
             exit 1
           fi
 
