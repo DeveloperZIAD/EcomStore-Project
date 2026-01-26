@@ -1,0 +1,91 @@
+/* src/pages/admin/Dashboard.css */
+
+.admin-dashboard {
+  padding: 20px;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.dashboard-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #343a40;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.stats-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.card-icon {
+  font-size: 3rem;
+  opacity: 0.3;
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.card-value {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.quick-actions-title {
+  font-size: 1.8rem;
+  margin-top: 50px;
+  margin-bottom: 30px;
+  color: #343a40;
+}
+
+.quick-action-btn {
+  height: 100px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.quick-action-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 70vh;
+}
+
+.error-alert {
+  max-width: 600px;
+  margin: 100px auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-title {
+    font-size: 2rem;
+  }
+
+  .card-value {
+    font-size: 1.5rem;
+  }
+
+  .quick-action-btn {
+    height: 80px;
+    font-size: 1rem;
+  }
+}
