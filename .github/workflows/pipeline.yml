@@ -39,17 +39,32 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 1. بناء الصور ورفعها (هذه الخطوة ضرورية قبل تشغيل الـ Swarm)
-      - name: Build and Push Docker Images
-        uses: docker/bake-action@v5
+      # بناء ورفع الباكند
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v5
         with:
-          files: docker-stack-Swarm.yml
+          context: .
+          file: ./Dockerfile
           push: true
-          set: |
-            *.cache-from=type=gha
-            *.cache-to=type=gha,mode=max
+          tags: ghcr.io/developerziad/ecom-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      # 2. تحويل البيئة إلى Swarm Mode وتشغيل الاختبار
+      # بناء ورفع الفرونت آند مع حقن رابط الـ API
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./EcomFront
+          file: ./EcomFront/Dockerfile
+          push: true
+          tags: ghcr.io/developerziad/ecom-frontend:latest
+          # هذه الخطوة هي التي ستحل مشكلة الـ localhost في المتصفح
+          build-args: |
+            REACT_APP_API_URL=https://ecomstore-project-production.up.railway.app/api
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # اختبار السوارم للتأكد من سلامة الملفات
       - name: Swarm Mode Smoke Test
         run: |
           echo "🚀 Initializing Swarm Mode..."
@@ -61,19 +76,12 @@ jobs:
           echo "⏳ Waiting for services to stabilize (60s)..."
           sleep 60
 
-          echo "📊 Current Services Status:"
-          docker service ls
-
-          # التحقق من أن تطبيقاتك (الباكند والفرونت) تعمل بنجاح
-          # نحن نركز على استقرار الكود الذي قمت بكتابته
+          echo "📊 Checking Application Health..."
           BACKEND_STATUS=$(docker service ls | grep ecom_stack_backend | awk '{print $4}')
           FRONTEND_STATUS=$(docker service ls | grep ecom_stack_frontend | awk '{print $4}')
 
-          echo "Backend Replicas: $BACKEND_STATUS"
-          echo "Frontend Replicas: $FRONTEND_STATUS"
-
           if [[ "$BACKEND_STATUS" == "2/2" && "$FRONTEND_STATUS" == "2/2" ]]; then
-            echo "✅ Core Application is Healthy! (Database might still be warming up or limited by runner resources)"
+            echo "✅ Core Application is Healthy!"
           else
             echo "❌ Core Application failed to start!"
             docker stack ps ecom_stack --no-trunc
@@ -82,6 +90,4 @@ jobs:
 
       - name: Deployment Success
         if: success()
-        run: |
-          echo "✅ Swarm Deployment Verified!"
-          echo "🚀 Images are pushed and stack is validated."
+        run: echo "✅ Build and Push Successful! Railway will now pull the updated images."
