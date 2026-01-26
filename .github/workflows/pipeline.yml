@@ -2,59 +2,81 @@ name: EcomStore Continuous Delivery
 
 on:
   push:
-    branches: [main] # سيعمل الأكشن فقط عند الرفع على الفرع الرئيسي
+    branches: [main]
+  pull_request:
+    branches: [main]
 
+# تحسين الصلاحيات لرفع الصور وقراءة الكود بأمان
 permissions:
   contents: read
-  packages: write # ضروري للسماح للأكشن برفع الصور لـ GitHub Packages
+  packages: write
+  id-token: write
 
 jobs:
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # حماية ضد التعليق اللانهائي
+
     steps:
-      # 1. جلب الكود من المستودع
+      # 1. جلب الكود مع دعم كامل لـ Git History
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # 2. إعداد Honeycomb للمراقبة (Pipeline Observability)
-      - name: Setup Honeycomb
+      # 2. إعداد Honeycomb للمراقبة مع معالجة حالة عدم وجود المفتاح
+      - name: Setup Honeycomb Observability
         uses: honeycombio/gha-buildevents@v2
         with:
           apikey: ${{ secrets.HONEYCOMB_API_KEY }}
           dataset: ecom-store-production
+        continue-on-error: true # لكي لا يتوقف الـ Pipeline إذا فشل Honeycomb
 
-      # 3. تسجيل الدخول لـ GitHub Container Registry (GHCR)
-      - name: Login to GHCR
+      # 3. تسجيل الدخول إلى مخزن صور GitHub (GHCR)
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 4. بناء الصور (Backend & Frontend) بناءً على ملف الـ Swarm
-      - name: Build Images
-        run: |
-          docker compose -f docker-stack-Swarm.yml build
+      # 4. بناء الصور باستخدام Docker Buildx (أسرع ويدعم الـ Cache)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      # 5. رفع الصور لـ GitHub Packages
-      - name: Push Images to GHCR
-        run: |
-          docker compose -f docker-stack-Swarm.yml push
+      - name: Build and Push Docker Images
+        uses: docker/bake-action@v4
+        with:
+          files: docker-stack-Swarm.yml
+          push: true
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
 
-      # 6. اختبار تشغيل الحاويات (Smoke Test)
-      - name: Smoke Test
+      # 5. اختبار الدخان (Smoke Test) للتأكد من استقرار الحاويات
+      - name: Production Smoke Test
         run: |
-          # تشغيل النظام مصغراً للتأكد من عدم وجود أخطاء قاتلة
+          echo "Starting containers for validation..."
           docker compose -f docker-stack-Swarm.yml up -d
-          sleep 30 # وقت إضافي لـ SQL Edge لتبدأ
+
+          echo "Waiting for SQL Server and Services to warm up..."
+          sleep 45 
+
+          # التحقق من حالة الحاويات
           docker ps
-          # التأكد من أن الحاويات تعمل (ليست في حالة Restarting)
-          if [ $(docker ps -f status=running | wc -l) -lt 3 ]; then 
-            echo "❌ Some containers failed to start!"; 
-            exit 1; 
+
+          # التأكد أن الحاويات الأساسية (الباكند، الفرونت، القاعدة) تعمل وليست في حالة Crash
+          RUNNING_COUNT=$(docker ps --filter "status=running" --format "{{.Names}}" | wc -l)
+          if [ "$RUNNING_COUNT" -lt 3 ]; then
+            echo "❌ Critical Error: Some containers are not running!"
+            docker compose -f docker-stack-Swarm.yml logs
+            exit 1
           fi
 
-      # 7. التقرير النهائي
-      - name: Success Notification
+      # 6. إشعار النجاح النهائي
+      - name: Deployment Success
         if: success()
-        run: echo "🚀 Build and Test passed! Railway will now take over deployment."
+        run: |
+          echo "✅ All checks passed!"
+          echo "🚀 Images are now live at ghcr.io/${{ github.repository_owner }}"
+          echo "🌐 Railway will automatically detect the new image tags and deploy."
