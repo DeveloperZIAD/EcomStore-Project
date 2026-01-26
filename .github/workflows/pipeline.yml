@@ -37,10 +37,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3 # تحديث لـ v3
+        uses: docker/setup-buildx-action@v3
 
+      # 1. بناء الصور ورفعها (هذه الخطوة ضرورية قبل تشغيل الـ Swarm)
       - name: Build and Push Docker Images
-        uses: docker/bake-action@v5 # تم التحديث إلى v5 لحل مشكلة التوافق
+        uses: docker/bake-action@v5
         with:
           files: docker-stack-Swarm.yml
           push: true
@@ -48,25 +49,33 @@ jobs:
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
 
-      - name: Production Smoke Test
+      # 2. تحويل البيئة إلى Swarm Mode وتشغيل الاختبار
+      - name: Swarm Mode Smoke Test
         run: |
-          echo "Starting containers in standard mode for validation..."
-          # سنستخدم docker compose بدون stack لأننا لسنا في swarm mode هنا
-          docker compose -f docker-stack-Swarm.yml up -d
+          echo "🚀 Initializing Swarm Mode on GitHub Runner..."
+          # تفعيل وضع السوارم محلياً
+          docker swarm init --advertise-addr 127.0.0.1
 
-          echo "Waiting for services to stabilize..."
-          sleep 45 
+          echo "📦 Deploying Stack using Swarm..."
+          # استخدام docker stack deploy بدلاً من compose
+          docker stack deploy -c docker-stack-Swarm.yml ecom_stack
 
-          docker ps
+          echo "⏳ Waiting for services to stabilize (60s)..."
+          sleep 60
 
-          # التحقق من تشغيل الحاويات
-          RUNNING_COUNT=$(docker ps --filter "status=running" --format "{{.Names}}" | wc -l)
-          if [ "$RUNNING_COUNT" -lt 3 ]; then
-            echo "❌ Critical Error: Containers failed to start in time!"
-            docker compose -f docker-stack-Swarm.yml logs
+          echo "📊 Current Services Status:"
+          docker service ls
+
+          # التحقق من أن الخدمات تعمل (Replicas 1/1)
+          # إذا وجدنا "0/" فهذا يعني أن هناك خدمة فشلت
+          if [ $(docker service ls | grep "0/" | wc -l) -gt 0 ]; then
+            echo "❌ Critical Error: One or more Swarm services failed to start!"
+            docker stack ps ecom_stack --no-trunc
             exit 1
           fi
 
       - name: Deployment Success
         if: success()
-        run: echo "✅ Deploy Successful!"
+        run: |
+          echo "✅ Swarm Deployment Verified!"
+          echo "🚀 Images are pushed and stack is validated."
