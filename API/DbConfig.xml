@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <DatabaseConfig>
-<ConnectionString>
-Server=db39285.databaseasp.net,1433;Database=db39285;User Id=db39285;Password=Cb8+%7Xq3Ed_;TrustServerCertificate=True;MultipleActiveResultSets=true;
-</ConnectionString>
+  <ConnectionString>
+    Server=db39285.public.databaseasp.net,1433;Database=db39285;User Id=db39285;Password=Cb8+%7Xq3Ed_;TrustServerCertificate=True;MultipleActiveResultSets=true;Encrypt=True;
+  </ConnectionString>
 </DatabaseConfig>
-
-
-
