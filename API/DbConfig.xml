@@ -1,13 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <DatabaseConfig>
 <ConnectionString>
-    Server=db.railway.internal,1433;
-    Database=EcomStoreDB;
-    User Id=sa;
-    Password=YourStrongPassword123!;
-    Encrypt=False;
-    TrustServerCertificate=True;
-    MultipleActiveResultSets=True;
+Server=db39285.databaseasp.net;Database=db39285;User Id=db39285;Password=Cb8+%7Xq3Ed_;TrustServerCertificate=True;
 </ConnectionString>
 </DatabaseConfig>
 
