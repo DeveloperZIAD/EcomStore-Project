@@ -1,6 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <DatabaseConfig>
-<ConnectionString>Server=db;Database=EcomStoreDB;User Id=sa;Password=YourStrongPassword123!;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True;</ConnectionString>
+<ConnectionString>
+    Server=db.railway.internal,1433;
+    Database=EcomStoreDB;
+    User Id=sa;
+    Password=YourStrongPassword123!;
+    Encrypt=False;
+    TrustServerCertificate=True;
+    MultipleActiveResultSets=True;
+</ConnectionString>
 </DatabaseConfig>
+
 
 
