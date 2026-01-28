@@ -60,7 +60,7 @@ jobs:
           tags: ghcr.io/developerziad/ecom-frontend:latest
           # هذه الخطوة هي التي ستحل مشكلة الـ localhost في المتصفح
           build-args: |
-            REACT_APP_API_URL=https://ecomstore-project-production.up.railway.app/api
+            REACT_APP_API_URL=https://harmonious-art-production-29d4.up.railway.app
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
