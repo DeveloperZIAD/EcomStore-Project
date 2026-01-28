@@ -5,10 +5,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllers();
-
-// Add CORS
+// 1. Add CORS Policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -19,13 +16,14 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add API Explorer and Swagger
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// 2. Swagger Configuration
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Ecom Store API", Version = "v1" });
 
-    // Add JWT support in Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
@@ -51,7 +49,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// JWT Authentication
+// 3. JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -63,7 +61,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "YourFallbackSecretKeyForDevelopmentOnly"))
         };
     });
 
@@ -71,19 +69,23 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// 4. Configure Pipeline Order
+// Swagger دائماً في البداية للمعاينة
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "EcomStore API V1");
-    c.RoutePrefix = string.Empty; // Swagger on root[](http://localhost:5000)
+    c.RoutePrefix = string.Empty; 
 });
 
-// Important order:
-app.UseCors("AllowAll");           // CORS first
-app.UseHttpsRedirection();         // Optional (can comment if only http)
-app.UseAuthentication();           // Authentication
-app.UseAuthorization();            // Authorization
+// تفعيل الـ CORS كأولوية قصوى قبل أي توجيه أو حماية
+app.UseCors("AllowAll");
+
+// تعطيل الـ HttpsRedirection مؤقتاً لحل مشكلة تعارض الـ CORS مع Railway
+// app.UseHttpsRedirection(); 
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
